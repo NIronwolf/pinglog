@@ -1,0 +1,30 @@
+# Virtual environment
+.venv/
+
+# uv cache
+.uv/
+
+# Secrets
+.env
+
+# Database
+*.db
+*.sqlite3
+data/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
