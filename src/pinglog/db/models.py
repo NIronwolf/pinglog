@@ -1,8 +1,9 @@
 import sqlite3
+from pinglog.config import DATABASE_PATH
 
 
 def init_db():
-    con = sqlite3.connect("data/pinglog.db")
+    con = sqlite3.connect(DATABASE_PATH)
 
     cur = con.cursor()
 
