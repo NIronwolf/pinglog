@@ -1,6 +1,7 @@
 import sqlite3
-from datetime import datetime
-from pinglog.config import DATABASE_PATH
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
+from pinglog.config import DATABASE_PATH, USER_TIMEZONE
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 def insert_log(chat_id, activity, xp_earned):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        now = datetime.now()  # TODO: support timezone-aware timestamps
+        now = datetime.now(timezone.utc)  # TODO: support timezone-aware timestamps
         cur.execute(
             "INSERT INTO logs (timestamp, chat_id, activity, xp_earned) "
             "VALUES (?, ?, ?, ?);",
@@ -32,22 +33,25 @@ def insert_log(chat_id, activity, xp_earned):
 def get_streak(chat_id):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        cur.execute(
-            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
-            (chat_id,),
-        )
         streak = 0
         check_date = today = datetime.now().date()
-        for row in cur.fetchall():
+        for row in cur.execute(
+            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
+            (chat_id,),
+        ):
             logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
-            log_date = datetime.fromisoformat(row[0]).date()
+            log_date = (
+                datetime.fromisoformat(row[0])
+                .astimezone(ZoneInfo(USER_TIMEZONE))
+                .date()
+            )
             logger.debug(
                 f"Checking log entry date: {log_date} against check_date: {check_date}"
             )
             if log_date < check_date:
                 break
             if check_date == log_date:
-                check_date = check_date.replace(day=check_date.day - 1)
+                check_date = check_date - timedelta(days=1)
             streak = (today - check_date).days
         logger.debug(f"Calculated streak for chat_id={chat_id}: {streak}")
     return streak
