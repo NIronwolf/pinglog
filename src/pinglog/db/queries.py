@@ -36,7 +36,8 @@ def get_streak(chat_id):
         streak = 0
         check_date = today = datetime.now().date()
         for row in cur.execute(
-            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
+            "SELECT timestamp FROM logs WHERE chat_id=? "
+            "GROUP BY DATE(timestamp) ORDER BY timestamp DESC;",
             (chat_id,),
         ):
             logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
