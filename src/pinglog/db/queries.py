@@ -9,21 +9,48 @@ logger = logging.getLogger(__name__)
 def insert_log(chat_id, activity, xp_earned):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        now = datetime.now()  # TODO support timezone-aware timestamps
+        now = datetime.now()  # TODO: support timezone-aware timestamps
         cur.execute(
-            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned) VALUES (?, ?, ?, ?);",
+            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned) "
+            "VALUES (?, ?, ?, ?);",
             (now, chat_id, activity, xp_earned),
         )
         row_id = cur.lastrowid
         logger.debug(
-            f"Inserted log: chat_id={chat_id}, activity='{activity}', xp_earned={xp_earned}, timestamp={now}"
+            f"Inserted log: chat_id={chat_id}, activity='{activity}', "
+            f"xp_earned={xp_earned}, timestamp={now}"
         )
         logger.debug(f"Database row_id: {row_id}")
     return row_id
 
 
-def get_streak():
-    pass
+# get_streak calculate how many continuous days of entries exist for a given
+# chat_id starting from now.  A missed day breaks the streak.  For example,
+# if there are entries for today, yesterday, and the day before yesterday,
+# but not three days ago, the streak is 3.  If there are entries for today
+# and the day before yesterday, but not yesterday, the streak is 1.
+def get_streak(chat_id):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
+            (chat_id,),
+        )
+        streak = 0
+        check_date = today = datetime.now().date()
+        for row in cur.fetchall():
+            logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
+            log_date = datetime.fromisoformat(row[0]).date()
+            logger.debug(
+                f"Checking log entry date: {log_date} against check_date: {check_date}"
+            )
+            if log_date < check_date:
+                break
+            if check_date == log_date:
+                check_date = check_date.replace(day=check_date.day - 1)
+            streak = (today - check_date).days
+        logger.debug(f"Calculated streak for chat_id={chat_id}: {streak}")
+    return streak
 
 
 def get_day():
