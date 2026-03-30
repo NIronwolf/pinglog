@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def insert_log(chat_id, activity, xp_earned):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        now = datetime.now(timezone.utc)  # TODO: support timezone-aware timestamps
+        now = int(datetime.now(timezone.utc).timestamp())
         cur.execute(
             "INSERT INTO logs (timestamp, chat_id, activity, xp_earned) "
             "VALUES (?, ?, ?, ?);",
@@ -36,13 +36,12 @@ def get_streak(chat_id):
         streak = 0
         check_date = today = datetime.now().date()
         for row in cur.execute(
-            "SELECT timestamp FROM logs WHERE chat_id=? "
-            "GROUP BY DATE(timestamp) ORDER BY timestamp DESC;",
+            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
             (chat_id,),
         ):
             logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
             log_date = (
-                datetime.fromisoformat(row[0])
+                datetime.fromtimestamp(row[0], tz=timezone.utc)
                 .astimezone(ZoneInfo(USER_TIMEZONE))
                 .date()
             )
@@ -58,8 +57,39 @@ def get_streak(chat_id):
     return streak
 
 
-def get_day():
-    pass
+def get_day(chat_id, date):
+    result = []
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        beginning_of_day = int(
+            datetime.combine(date, datetime.min.time())
+            .astimezone(timezone.utc)
+            .timestamp()
+        )
+        end_of_day = int(
+            datetime.combine(date, datetime.max.time())
+            .astimezone(timezone.utc)
+            .timestamp()
+        )
+        logger.debug(
+            f"Getting logs for chat_id={chat_id} on date={date}, "
+            f"Searching between {beginning_of_day} and {end_of_day}"
+        )
+        for row in cur.execute(
+            "SELECT timestamp, activity, xp_earned FROM logs "
+            "WHERE chat_id=? AND timestamp BETWEEN ? AND ? "
+            "ORDER BY timestamp ASC;",
+            (chat_id, beginning_of_day, end_of_day),
+        ):
+            logger.debug(f"Found log entry for chat_id={chat_id} on date={date}: {row}")
+            result.append(
+                {
+                    "timestamp": row[0],
+                    "activity": row[1],
+                    "xp_earned": row[2],
+                }
+            )
+    return result
 
 
 def get_next_ping():
