@@ -7,6 +7,66 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def create_or_update_state(
+    chat_id, timezone_str=None, next_ping_at=None, silent_next=None
+):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute("SELECT id FROM state WHERE chat_id=?;", (chat_id,))
+        id_result = cur.fetchone()
+        if id_result:
+            logger.debug(f"Updating state for chat_id={chat_id}")
+            update_fields = []
+            params = []
+            if timezone_str is not None:
+                update_fields.append("timezone=?")
+                params.append(timezone_str)
+            if next_ping_at is not None:
+                update_fields.append("next_ping_at=?")
+                params.append(next_ping_at)
+            if silent_next is not None:
+                update_fields.append("silent_next=?")
+                params.append(1 if silent_next else 0)
+            params.append(chat_id)
+            cur.execute(
+                f"UPDATE state SET {', '.join(update_fields)} WHERE chat_id=?;",
+                tuple(params),
+            )
+        else:
+            logger.debug(f"Inserting new state for chat_id={chat_id}")
+            insert_fields = ["chat_id"]
+            params = [chat_id]
+            if timezone_str is not None:
+                insert_fields.append("timezone")
+                params.append(timezone_str)
+            if next_ping_at is not None:
+                insert_fields.append("next_ping_at")
+                params.append(next_ping_at)
+            if silent_next is not None:
+                insert_fields.append("silent_next")
+                params.append(1 if silent_next else 0)
+            cur.execute(
+                f"INSERT INTO state ({', '.join(insert_fields)}) VALUES ({', '.join(['?'] * len(params))});",
+                tuple(params),
+            )
+
+
+def get_timezone(chat_id):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute("SELECT timezone FROM state WHERE chat_id=?;", (chat_id,))
+        result = cur.fetchone()
+        if result:
+            timezone_str = result[0]
+            logger.debug(f"Found timezone for chat_id={chat_id}: {timezone_str}")
+            return timezone_str
+        else:
+            logger.debug(
+                f"No timezone found for chat_id={chat_id}, using default: {USER_TIMEZONE}"
+            )
+            return USER_TIMEZONE
+
+
 def insert_log(chat_id, activity, xp_earned):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
@@ -31,6 +91,7 @@ def insert_log(chat_id, activity, xp_earned):
 # but not three days ago, the streak is 3.  If there are entries for today
 # and the day before yesterday, but not yesterday, the streak is 1.
 def get_streak(chat_id):
+    user_timezone = get_timezone(chat_id)
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         streak = 0
@@ -42,7 +103,7 @@ def get_streak(chat_id):
             logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
             log_date = (
                 datetime.fromtimestamp(row[0], tz=timezone.utc)
-                .astimezone(ZoneInfo(USER_TIMEZONE))
+                .astimezone(ZoneInfo(user_timezone))
                 .date()
             )
             logger.debug(
@@ -92,23 +153,19 @@ def get_day(chat_id, date):
     return result
 
 
-def get_next_ping():
+def set_next_ping(chat_id, date):
     pass
 
 
-def set_next_ping():
+def get_next_ping(chat_id):
     pass
 
 
-def set_silent_next():
+def set_silent_next(chat_id, value=True):
     pass
 
 
-def unset_silent_next():
-    pass
-
-
-def is_silent_next():
+def is_silent_next(chat_id):
     pass
 
 
