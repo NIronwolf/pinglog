@@ -154,7 +154,14 @@ def get_day(chat_id, date):
 
 
 def set_next_ping(chat_id, date):
-    pass
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        next_ping_at = int(date.astimezone(timezone.utc).timestamp())
+        logger.debug(f"Setting next ping for chat_id={chat_id} to {next_ping_at}")
+        cur.execute(
+            "UPDATE state SET next_ping_at=? WHERE chat_id=?;",
+            (next_ping_at, chat_id),
+        )
 
 
 def get_next_ping(chat_id):
