@@ -149,8 +149,18 @@ def set_next_ping(chat_id: int, next_ping_at: int):
         )
 
 
-def get_next_ping(chat_id):
-    pass
+def get_next_ping(chat_id) -> int | None:
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute("SELECT next_ping_at FROM state WHERE chat_id=?;", (chat_id,))
+        result = cur.fetchone()
+        if result and result[0] is not None:
+            next_ping_at = result[0]
+            logger.debug(f"Next ping for chat_id={chat_id} is {next_ping_at}")
+            return next_ping_at
+        else:
+            logger.debug(f"No next ping set for chat_id={chat_id}")
+            return None
 
 
 def set_silent_next(chat_id, value=True):
