@@ -8,47 +8,32 @@ logger = logging.getLogger(__name__)
 
 
 def create_or_update_state(
-    chat_id, timezone_str=None, next_ping_at=None, silent_next=None
+    chat_id, timezone_str=USER_TIMEZONE, next_ping_at=None, silent_next=None
 ):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        cur.execute("SELECT id FROM state WHERE chat_id=?;", (chat_id,))
-        id_result = cur.fetchone()
-        if id_result:
-            logger.debug(f"Updating state for chat_id={chat_id}")
-            update_fields = []
-            params = []
-            if timezone_str is not None:
-                update_fields.append("timezone=?")
-                params.append(timezone_str)
-            if next_ping_at is not None:
-                update_fields.append("next_ping_at=?")
-                params.append(next_ping_at)
-            if silent_next is not None:
-                update_fields.append("silent_next=?")
-                params.append(1 if silent_next else 0)
+        fields = []
+        params = []
+        if chat_id is not None:
+            fields.append("chat_id")
             params.append(chat_id)
-            cur.execute(
-                f"UPDATE state SET {', '.join(update_fields)} WHERE chat_id=?;",
-                tuple(params),
-            )
-        else:
-            logger.debug(f"Inserting new state for chat_id={chat_id}")
-            insert_fields = ["chat_id"]
-            params = [chat_id]
-            if timezone_str is not None:
-                insert_fields.append("timezone")
-                params.append(timezone_str)
-            if next_ping_at is not None:
-                insert_fields.append("next_ping_at")
-                params.append(next_ping_at)
-            if silent_next is not None:
-                insert_fields.append("silent_next")
-                params.append(1 if silent_next else 0)
-            cur.execute(
-                f"INSERT INTO state ({', '.join(insert_fields)}) VALUES ({', '.join(['?'] * len(params))});",
-                tuple(params),
-            )
+        if timezone_str is not None:
+            fields.append("timezone")
+            params.append(timezone_str)
+        if next_ping_at is not None:
+            fields.append("next_ping_at")
+            params.append(next_ping_at)
+        if silent_next is not None:
+            fields.append("silent_next")
+            params.append(1 if silent_next else 0)
+        logger.debug(f"Query fields: {fields}, params: {params}")
+        logger.debug(
+            f"INSERT OR REPLACE INTO state ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(params))});"
+        )
+        cur.execute(
+            f"INSERT OR REPLACE INTO state ({', '.join(fields)}) VALUES ({', '.join(['?'] * len(params))});",
+            tuple(params),
+        )
 
 
 def get_timezone(chat_id):
@@ -153,10 +138,10 @@ def get_day(chat_id, date):
     return result
 
 
-def set_next_ping(chat_id, date):
+def set_next_ping(chat_id: int, next_ping_at: int):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        next_ping_at = int(date.astimezone(timezone.utc).timestamp())
+        # next_ping_at = int(date.astimezone(timezone.utc).timestamp())
         logger.debug(f"Setting next ping for chat_id={chat_id} to {next_ping_at}")
         cur.execute(
             "UPDATE state SET next_ping_at=? WHERE chat_id=?;",
