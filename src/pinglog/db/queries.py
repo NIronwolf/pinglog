@@ -104,16 +104,17 @@ def get_streak(chat_id):
 
 
 def get_day(chat_id, date):
+    user_timezone = get_timezone(chat_id)
     result = []
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         beginning_of_day = int(
-            datetime.combine(date, datetime.min.time())
+            datetime.combine(date, datetime.min.time(), tzinfo=ZoneInfo(user_timezone))
             .astimezone(timezone.utc)
             .timestamp()
         )
         end_of_day = int(
-            datetime.combine(date, datetime.max.time())
+            datetime.combine(date, datetime.max.time(), tzinfo=ZoneInfo(user_timezone))
             .astimezone(timezone.utc)
             .timestamp()
         )
@@ -197,3 +198,110 @@ def get_total_xp(chat_id):
         total_xp = result[0] if result[0] is not None else 0
         logger.debug(f"Total XP calculated: {total_xp}")
         return total_xp
+
+
+def get_all_chat_ids():
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute("SELECT DISTINCT chat_id FROM state;")
+        result = cur.fetchall()
+        chat_ids = [row[0] for row in result]
+        logger.debug(f"Retrieved chat_ids: {chat_ids}")
+        return chat_ids
+
+
+def get_recent_logs(chat_id, limit=10):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT id, timestamp, activity, xp_earned FROM logs "
+            "WHERE chat_id=? ORDER BY timestamp DESC LIMIT ?;",
+            (chat_id, limit),
+        )
+        result = []
+        for row in cur.fetchall():
+            logger.debug(f"Retrieved log entry for chat_id={chat_id}: {row}")
+            result.append(
+                {
+                    "id": row[0],
+                    "timestamp": row[1],
+                    "activity": row[2],
+                    "xp_earned": row[3],
+                }
+            )
+        return result
+
+
+def get_stats(chat_id):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT COUNT(*), SUM(xp_earned) FROM logs WHERE chat_id=?;",
+            (chat_id,),
+        )
+        result = cur.fetchone()
+        total_entries = result[0] if result[0] is not None else 0
+        total_xp = result[1] if result[1] is not None else 0
+        logger.debug(
+            f"Stats for chat_id={chat_id}: total_entries={total_entries}, total_xp={total_xp}"
+        )
+        return {
+            "total_entries": total_entries,
+            "total_xp": total_xp,
+        }
+
+
+def edit_log_entry(log_id, new_activity=None, new_xp_earned=None):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        fields = []
+        params = []
+        if new_activity is not None:
+            fields.append("activity=?")
+            params.append(new_activity)
+        if new_xp_earned is not None:
+            fields.append("xp_earned=?")
+            params.append(new_xp_earned)
+        params.append(log_id)
+        if not fields:
+            logger.debug(f"No fields to update for log entry id={log_id}")
+            return
+        logger.debug(
+            f"Editing log entry id={log_id} with fields: {fields}, params: {params}"
+        )
+        cur.execute(
+            f"UPDATE logs SET {', '.join(fields)} WHERE id=?;",
+            tuple(params),
+        )
+
+
+def delete_log_entry(log_id):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        logger.debug(f"Deleting log entry id={log_id}")
+        cur.execute(
+            "DELETE FROM logs WHERE id=?;",
+            (log_id,),
+        )
+
+
+def get_all_logs(chat_id):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT id, timestamp, activity, xp_earned FROM logs "
+            "WHERE chat_id=? ORDER BY timestamp ASC;",
+            (chat_id,),
+        )
+        result = []
+        for row in cur.fetchall():
+            logger.debug(f"Retrieved log entry for chat_id={chat_id}: {row}")
+            result.append(
+                {
+                    "id": row[0],
+                    "timestamp": row[1],
+                    "activity": row[2],
+                    "xp_earned": row[3],
+                }
+            )
+        return result
