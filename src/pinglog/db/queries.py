@@ -164,11 +164,29 @@ def get_next_ping(chat_id) -> int | None:
 
 
 def set_silent_next(chat_id, value=True):
-    pass
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        logger.debug(f"Setting silent_next for chat_id={chat_id} to {value}")
+        cur.execute(
+            "UPDATE state SET silent_next=? WHERE chat_id=?;",
+            (1 if value else 0, chat_id),
+        )
 
 
 def is_silent_next(chat_id):
-    pass
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        cur.execute("SELECT silent_next FROM state WHERE chat_id=?;", (chat_id,))
+        result = cur.fetchone()
+        if result and result[0] is not None:
+            silent_next = bool(result[0])
+            logger.debug(f"silent_next for chat_id={chat_id} is {silent_next}")
+            return silent_next
+        else:
+            logger.debug(
+                f"No silent_next set for chat_id={chat_id}, defaulting to False"
+            )
+            return False
 
 
 def get_total_xp(chat_id):
