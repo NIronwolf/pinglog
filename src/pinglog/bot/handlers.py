@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 # context.
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
+    if not update.message or not update.effective_user:
+        return
     user = update.effective_user
     await update.message.reply_html(
         rf"Hi {user.mention_html()}!",
@@ -50,11 +52,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
+    if not update.message or not update.effective_user:
+        return
     await update.message.reply_text("Help!")
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Echo the user message."""
+    if not update.message or not update.message.text or not update.effective_user:
+        return
     await update.message.reply_text(update.message.text)
 
 
