@@ -7,6 +7,7 @@ from pinglog.db.queries import (
 )
 from datetime import datetime, timezone
 from pinglog.util import parse_reply
+from telegram.helpers import escape_markdown
 
 
 async def handle_start(update, context):
@@ -32,15 +33,12 @@ async def handle_log_message(update, context):
             int(datetime.now(timezone.utc).timestamp()) + log["snooze"],
         )
         set_silent_next(update.effective_user.id, log["silent"])
-
-
-def handle_snooze_message(update, context):
-    pass
+    message = escape_markdown(
+        f"Logged: {log['entry']} (+{log['xp']} XP){' [Silent]' if log['silent'] else ''}",
+        version=2,
+    )
+    await update.message.reply_markdown_v2(message)
 
 
 def handle_status(update, context):
-    pass
-
-
-def handle_silent(update, context):
     pass
