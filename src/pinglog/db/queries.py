@@ -70,12 +70,12 @@ def insert_log(chat_id, activity, xp_earned):
     return row_id
 
 
-# get_streak calculate how many continuous days of entries exist for a given
-# chat_id starting from now.  A missed day breaks the streak.  For example,
-# if there are entries for today, yesterday, and the day before yesterday,
-# but not three days ago, the streak is 3.  If there are entries for today
-# and the day before yesterday, but not yesterday, the streak is 1.
 def get_streak(chat_id):
+    """get_streak calculates how many continuous days of entries exist for a given
+    chat_id starting from yesterday.  A missed day breaks the streak.  For example,
+    if there are entries for today, yesterday, and the day before yesterday,
+    but not three days ago, the streak is 2.  If there are entries for today
+    and the day before yesterday, but not yesterday, the streak is 0."""
     user_timezone = get_timezone(chat_id)
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
@@ -100,7 +100,7 @@ def get_streak(chat_id):
                 check_date = check_date - timedelta(days=1)
             streak = (today - check_date).days
         logger.debug(f"Calculated streak for chat_id={chat_id}: {streak}")
-    return streak
+    return max(0, streak - 1)
 
 
 def get_day(chat_id, date):
