@@ -1,5 +1,4 @@
 import logging
-from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from pinglog.config import TELEGRAM_BOT_TOKEN
 from pinglog.bot.handlers import handle_start, handle_log_message
