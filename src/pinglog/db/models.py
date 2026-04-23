@@ -22,6 +22,7 @@ def init_db():
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             chat_id         INTEGER NOT NULL UNIQUE,  -- Telegram chat ID,
             timezone        TEXT NOT NULL,            -- IANA timezone string (e.g., "America/New_York"),
+            ping_interval   INTEGER DEFAULT 3600,     -- seconds between pings (default: 1 hour)
             next_ping_at    INTEGER DEFAULT 0,        -- ISO 8601 datetime of scheduled ping
             silent_next     INTEGER DEFAULT 0         -- 1 = silent follow-up (sleeping)
         );

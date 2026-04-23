@@ -4,6 +4,7 @@ from pinglog.db.queries import (
     insert_log,
     set_next_ping,
     set_silent_next,
+    get_ping_interval,
 )
 from datetime import datetime, timezone
 from pinglog.util import parse_reply
@@ -26,13 +27,19 @@ async def handle_start(update, context):
 
 async def handle_log_message(update, context):
     log = parse_reply(update.message.text, update.effective_user.id)
+
     insert_log(update.effective_user.id, log["entry"], log["xp"]["total_xp"])
-    if log["snooze"] > 0:
-        set_next_ping(
-            update.effective_user.id,
-            int(datetime.now(timezone.utc).timestamp()) + log["snooze"],
-        )
-        set_silent_next(update.effective_user.id, log["silent"])
+
+    snooze = (
+        log["snooze"]
+        if log["snooze"] > 0
+        else get_ping_interval(update.effective_user.id)
+    )
+    set_next_ping(
+        update.effective_user.id,
+        int(datetime.now(timezone.utc).timestamp()) + snooze,
+    )
+    set_silent_next(update.effective_user.id, log["silent"])
 
     safe_entry = escape_markdown(log["entry"], version=2)
     safe_total = escape_markdown(str(log["xp"]["total_xp"]), version=2)

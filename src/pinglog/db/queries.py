@@ -139,6 +139,34 @@ def get_day(chat_id, date):
     return result
 
 
+def set_ping_interval(chat_id, interval_seconds):
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        logger.debug(
+            f"Setting ping interval for chat_id={chat_id} to {interval_seconds} seconds"
+        )
+        cur.execute(
+            "UPDATE state SET ping_interval=? WHERE chat_id=?;",
+            (interval_seconds, chat_id),
+        )
+
+
+def get_ping_interval(chat_id) -> int:
+    with sqlite3.connect(DATABASE_PATH) as con:
+        cur = con.cursor()
+        logger.debug(f"Getting ping interval for chat_id={chat_id}")
+        cur.execute("SELECT ping_interval FROM state WHERE chat_id=?;", (chat_id,))
+        result = cur.fetchone()
+        if result and result[0] is not None:
+            ping_interval = result[0]
+            logger.debug(
+                f"Ping interval for chat_id={chat_id} is {ping_interval} seconds"
+            )
+            return ping_interval
+        else:
+            return 3600  # default to 1 hour if not set
+
+
 def set_next_ping(chat_id: int, next_ping_at: int):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
