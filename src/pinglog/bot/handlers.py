@@ -16,6 +16,9 @@ from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 from pinglog.util import parse_reply, time_string_to_seconds
 from telegram.helpers import escape_markdown
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def handle_start(update, context):
@@ -162,6 +165,23 @@ async def handle_date(update, context):
 
 
 async def handle_delete(update, context):
+    if context.args:
+        if context.args[0].isdigit():
+            idx = int(context.args[0])
+            recent_logs = get_recent_logs(update.effective_user.id)
+            if 0 <= idx < len(recent_logs):
+                log_to_delete = recent_logs[idx]
+                logger.debug(f"Log entry selected for deletion: {log_to_delete}")
+                await update.message.reply_markdown_v2(
+                    escape_markdown(
+                        f"Log entry selected for deletion: {log_to_delete}", version=2
+                    )
+                )
+                return
+        await update.message.reply_markdown_v2(
+            "Invalid log index\\. Use /delete to see valid indices\\."
+        )
+        return
     await _show_recent(update, context)
 
 
