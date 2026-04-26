@@ -11,9 +11,9 @@ from pinglog.db.queries import (
     get_streak,
     get_day,
 )
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
-from pinglog.util import parse_reply
+from pinglog.util import parse_reply, time_string_to_seconds
 from telegram.helpers import escape_markdown
 
 
@@ -121,8 +121,48 @@ async def handle_status(update, context):
 
 
 async def handle_today(update, context):
-    """Replys with today's entries in the format:
-    Today - *Month D* (Y endtries, W XP)
+    user_timezone = get_timezone(update.effective_user.id)
+    today = datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()
+    await _show_log(update, context, today)
+
+
+async def handle_yesterday(update, context):
+    user_timezone = get_timezone(update.effective_user.id)
+    yesterday = datetime.now(timezone.utc).astimezone(
+        ZoneInfo(user_timezone)
+    ).date() - timedelta(days=1)
+    await _show_log(update, context, yesterday)
+
+
+async def handle_date(update, context):
+    user_timezone = get_timezone(update.effective_user.id)
+
+    if context.args:
+        try:
+            target_date = date.fromisoformat(context.args[0])
+        except ValueError:
+            relative_seconds = time_string_to_seconds(context.args[0])
+            if relative_seconds is not None:
+                target_date = datetime.now(timezone.utc).astimezone(
+                    ZoneInfo(user_timezone)
+                ).date() - timedelta(seconds=relative_seconds)
+            else:
+                await update.message.reply_markdown_v2(
+                    "Invalid date entered\\.  Format 'YYYY\\-MM\\-DD' or '3d'\\."
+                )
+                return
+    else:
+        await update.message.reply_markdown_v2(
+            "Invalid date entered\\.  Format 'YYYY\\-MM\\-DD' or '3d'\\."
+        )
+        return
+
+    await _show_log(update, context, target_date)
+
+
+async def _show_log(update, context, log_date: date):
+    """Replys with date's entries in the format:
+    Today/Yesterday/X days ago - *Month D* (Y endtries, W XP)
 
     *HH:MM* _+X XP_
     Entry text
@@ -131,15 +171,24 @@ async def handle_today(update, context):
     Entry text
     """
     user_timezone = get_timezone(update.effective_user.id)
-    activity_today = get_day(
-        update.effective_user.id,
-        datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date(),
-    )
+    activity_today = get_day(update.effective_user.id, log_date)
+
     entries_today = len(activity_today)
     xp_today = sum(entry["xp_earned"] for entry in activity_today)
 
+    day_diff = (
+        datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date() - log_date
+    ).days
+    day_str = (
+        "Today"
+        if day_diff == 0
+        else "Yesterday"
+        if day_diff == 1
+        else f"{day_diff} days ago"
+    )
+
     parts = [
-        f"Today \\- *{datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).strftime('%B %-d')}*"
+        f"{day_str} \\- *{log_date.strftime('%B %-d')}*"
         + f" \\({entries_today} entries, {xp_today} XP\\)",
     ]
     for entry in activity_today:

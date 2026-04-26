@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 from pinglog.config import DATABASE_PATH, USER_TIMEZONE
 import logging
@@ -111,18 +111,22 @@ def get_streak(chat_id):
     return streak
 
 
-def get_day(chat_id, date):
+def get_day(chat_id: int, log_date: date):
     user_timezone = get_timezone(chat_id)
     result = []
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         beginning_of_day = int(
-            datetime.combine(date, datetime.min.time(), tzinfo=ZoneInfo(user_timezone))
+            datetime.combine(
+                log_date, datetime.min.time(), tzinfo=ZoneInfo(user_timezone)
+            )
             .astimezone(timezone.utc)
             .timestamp()
         )
         end_of_day = int(
-            datetime.combine(date, datetime.max.time(), tzinfo=ZoneInfo(user_timezone))
+            datetime.combine(
+                log_date, datetime.max.time(), tzinfo=ZoneInfo(user_timezone)
+            )
             .astimezone(timezone.utc)
             .timestamp()
         )

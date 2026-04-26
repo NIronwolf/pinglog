@@ -6,6 +6,8 @@ from pinglog.bot.handlers import (
     handle_log_message,
     handle_status,
     handle_today,
+    handle_yesterday,
+    handle_date,
 )
 
 logging.basicConfig(level="DEBUG")
@@ -19,6 +21,8 @@ def main():
     )
     application.add_handler(CommandHandler("status", handle_status))
     application.add_handler(CommandHandler("today", handle_today))
+    application.add_handler(CommandHandler("yesterday", handle_yesterday))
+    application.add_handler(CommandHandler("date", handle_date))
     application.run_polling()
 
 
