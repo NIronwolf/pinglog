@@ -10,6 +10,7 @@ from pinglog.db.queries import (
     get_total_xp,
     get_streak,
     get_day,
+    get_recent_logs,
 )
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
@@ -160,6 +161,14 @@ async def handle_date(update, context):
     await _show_log(update, context, target_date)
 
 
+async def handle_delete(update, context):
+    await _show_recent(update, context)
+
+
+async def handle_edit(update, context):
+    await _show_recent(update, context)
+
+
 async def _show_log(update, context, log_date: date):
     """Replys with date's entries in the format:
     Today/Yesterday/X days ago - *Month D* (Y endtries, W XP)
@@ -204,6 +213,71 @@ async def _show_log(update, context, log_date: date):
     message = "\n".join(parts)
 
     await update.message.reply_markdown_v2(message)
+
+
+async def _show_recent(update, context):
+    recent_logs = get_recent_logs(update.effective_user.id)
+    if recent_logs is None or len(recent_logs) == 0:
+        await update.message.reply_markdown_v2("No recent activity found\\.")
+        return
+    user_timezone = get_timezone(update.effective_user.id)
+
+    formated_logs = []
+    idx = 0
+    current_day = entry_date = (
+        datetime.fromtimestamp(recent_logs[0]["timestamp"], tz=timezone.utc)
+        .astimezone(ZoneInfo(user_timezone))
+        .date()
+    )
+    for log in recent_logs:
+        entry_date = (
+            datetime.fromtimestamp(log["timestamp"], tz=timezone.utc).astimezone(
+                ZoneInfo(user_timezone)
+            )
+        ).date()
+        if entry_date != current_day:
+            day_diff = (
+                datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()
+                - current_day
+            ).days  # - 1
+            day_str = (
+                "Today"
+                if day_diff == 0
+                else "Yesterday"
+                if day_diff == 1
+                else f"{day_diff} days ago"
+            )
+            formated_logs.append(
+                f"\n*{day_str}* \\- {current_day.strftime('%B %-d')}\n"
+            )
+            current_day = entry_date
+        formated_logs.append(
+            f"*{idx}* \\- "
+            f"{datetime.fromtimestamp(log['timestamp'], tz=timezone.utc).astimezone(ZoneInfo(user_timezone)).strftime('%H:%M')} "
+            f"{escape_markdown(log['activity'], version=2)}\n"
+        )
+        idx += 1
+
+    day_diff = (
+        datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()
+        - entry_date
+    ).days
+    day_str = (
+        "Today"
+        if day_diff == 0
+        else "Yesterday"
+        if day_diff == 1
+        else f"{day_diff} days ago"
+    )
+    formated_logs.append(f"\n*{day_str}* \\- {entry_date.strftime('%B %-d')}\n")
+
+    formated_logs = list(reversed(formated_logs))
+
+    parts = ["Recent activity:"]
+    for log in formated_logs:
+        parts.append(log)
+
+    await update.message.reply_markdown_v2("\n".join(parts))
 
 
 async def check_registered(update, context) -> bool:

@@ -250,7 +250,7 @@ def get_all_chat_ids():
         return chat_ids
 
 
-def get_recent_logs(chat_id, limit=10):
+def get_recent_logs(chat_id: int, limit: int = 10):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         cur.execute(
