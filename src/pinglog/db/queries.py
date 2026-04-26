@@ -80,7 +80,8 @@ def get_streak(chat_id):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         streak = 0
-        check_date = today = datetime.now().date()
+        today = datetime.now().date()
+        check_date = today - timedelta(days=1)
         for row in cur.execute(
             "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
             (chat_id,),
@@ -100,7 +101,7 @@ def get_streak(chat_id):
                 check_date = check_date - timedelta(days=1)
             streak = (today - check_date).days
         logger.debug(f"Calculated streak for chat_id={chat_id}: {streak}")
-    return max(0, streak - 1)
+    return streak
 
 
 def get_day(chat_id, date):
