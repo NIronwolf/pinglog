@@ -9,11 +9,12 @@ def init_db():
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS logs (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp   INTEGER NOT NULL,   -- Unix timestamp of when the activity was logged
-            chat_id     INTEGER NOT NULL,   -- Telegram chat ID
-            activity    TEXT    NOT NULL,   -- what you typed
-            xp_earned   INTEGER DEFAULT 10
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp    INTEGER NOT NULL,   -- Unix timestamp of when the activity was logged
+            chat_id      INTEGER NOT NULL,   -- Telegram chat ID
+            activity     TEXT    NOT NULL,   -- what you typed
+            xp_earned    INTEGER,            -- total XP earned for this entry (base + bonuses)
+            xp_breakdown TEXT                -- JSON string with breakdown of XP components (base, streak bonus, etc.)
         );
     """)
 
@@ -28,7 +29,16 @@ def init_db():
         );
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS migrations (
+        id InTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL UNIQUE,
+        applied_at INTEGER NOT NULL
+        );
+    """)
+
     con.commit()
+
     con.close()
 
 
