@@ -196,6 +196,7 @@ async def handle_delete(update, context):
                 await update.message.reply_markdown_v2(
                     f"*Delete* this log entry?\n\n{entry_time} \\- *{safe_activity}*",
                     reply_markup=reply_markup,
+                    reply_to_message_id=update.message.message_id,
                 )
                 return
 
@@ -219,7 +220,11 @@ async def handle_edit_callback(update, context):
 
 
 async def handle_cancel_callback(update, context):
-    pass
+    query = update.callback_query
+
+    await query.answer()
+
+    await query.edit_message_text(text="Action cancelled.")
 
 
 async def _show_log(update, context, log_date: date):
