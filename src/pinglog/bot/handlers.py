@@ -36,9 +36,12 @@ async def handle_log_message(update, context):
     if not await check_registered(update, context):
         return
 
+    if not update.message or not update.message.text or not update.effective_user:
+        return
+
     log = parse_reply(update.message.text, update.effective_user.id)
 
-    insert_log(update.effective_user.id, log["entry"], log["xp"])
+    insert_log(update.effective_user.id, log["timestamp"], log["entry"], log["xp"])
 
     snooze = (
         log["snooze"]
@@ -47,7 +50,7 @@ async def handle_log_message(update, context):
     )
     set_next_ping(
         update.effective_user.id,
-        int(datetime.now(timezone.utc).timestamp()) + snooze,
+        log["timestamp"] + snooze,
     )
     set_silent_next(update.effective_user.id, log["silent"])
 

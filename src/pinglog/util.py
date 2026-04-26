@@ -1,8 +1,8 @@
 import logging
 import re
-from datetime import datetime, timezone
-from typing import TypedDict
+from datetime import datetime, timezone, timedelta, time
 from zoneinfo import ZoneInfo
+from pinglog.datatypes import ParsedReply, XPBreakdown
 
 from pinglog.db.queries import (
     get_day,
@@ -13,24 +13,6 @@ from pinglog.db.queries import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class XPBreakdown(TypedDict):
-    base_xp: int
-    first_log_bonus: int
-    comeback_bonus: int
-    early_morning_bonus: int
-    late_night_bonus: int
-    accuracy_bonus: int
-    streak_bonus: int
-    total_xp: int
-
-
-class ParsedReply(TypedDict):
-    entry: str
-    xp: XPBreakdown
-    snooze: int
-    silent: bool
 
 
 def parse_reply(text: str, chat_id: int) -> ParsedReply:
@@ -48,20 +30,52 @@ def parse_reply(text: str, chat_id: int) -> ParsedReply:
         },
         "snooze": 0,
         "silent": False,
+        "timestamp": int(datetime.now(timezone.utc).timestamp()),
     }
     if text:
-        keyword = next((kw for kw in ["snooze", "silent"] if kw in text.lower()), None)
-        if keyword:
-            snooze_time_text = text.lower().rsplit(keyword, 1)[1].strip()
+        text = text.strip()
+
+        # Look for HH:MM format at the start of the message to allow backdating entries
+        time_prefix = re.match(r"^(\d{1,2}):(\d{2})\s+", text)
+        if time_prefix:
+            date = datetime.now(timezone.utc).date()
+            parsed_time = time(int(time_prefix.group(1)), int(time_prefix.group(2)))
+            now_local = datetime.now(timezone.utc).astimezone(
+                ZoneInfo(get_timezone(chat_id))
+            )
+            if parsed_time > now_local.time():
+                date -= timedelta(days=1)
+            result["timestamp"] = int(
+                datetime.combine(
+                    date, parsed_time, tzinfo=ZoneInfo(get_timezone(chat_id))
+                )
+                .astimezone(timezone.utc)
+                .timestamp()
+            )
+            text = text[time_prefix.end() :]
+        result["entry"] = text
+
+        # Look for Xd Xh Xm Xs format at the end of the message for snooze duration
+        duration_suffix = re.search(r"\s+((?:\d+\s*[smhd]\s*)+)$", text, re.IGNORECASE)
+        if duration_suffix:
+            snooze_time_text = duration_suffix.group(1).lower()
             result["snooze"] = time_string_to_seconds(snooze_time_text)
             if result["snooze"] != 0:
-                result["entry"] = text.rsplit(keyword, 1)[0].strip()
-                result["silent"] = keyword == "silent"
-        result["xp"] = calculate_xp(result["entry"], chat_id)
+                text = text[: duration_suffix.start()].strip()
+                result["entry"] = text
+
+            # Also look for s | sil | silent keyword at the end of the message for silent snooze
+            silent_suffix = re.search(r"\s+(s|sil|silent)\s*$", text, re.IGNORECASE)
+            if silent_suffix:
+                result["silent"] = True
+                text = text[: silent_suffix.start()].strip()
+                result["entry"] = text
+
+        result["xp"] = calculate_xp(result["entry"], chat_id, result["timestamp"])
     return result
 
 
-def calculate_xp(entry: str, chat_id: int) -> XPBreakdown:
+def calculate_xp(entry: str, chat_id: int, timestamp: int) -> XPBreakdown:
     xp: XPBreakdown = {
         "base_xp": 0,
         "first_log_bonus": 0,
@@ -72,7 +86,7 @@ def calculate_xp(entry: str, chat_id: int) -> XPBreakdown:
         "streak_bonus": 0,
         "total_xp": 0,
     }
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.fromtimestamp(timestamp, tz=timezone.utc)
     user_timezone = get_timezone(chat_id)
     now_local = now_utc.astimezone(ZoneInfo(user_timezone))
 

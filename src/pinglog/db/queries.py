@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from pinglog.config import DATABASE_PATH, USER_TIMEZONE
 import logging
+from pinglog.datatypes import XPBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +54,14 @@ def get_timezone(chat_id):
             return USER_TIMEZONE
 
 
-def insert_log(chat_id, activity, xp_breakdown):
+def insert_log(chat_id: int, timestamp: int, activity: str, xp_breakdown: XPBreakdown):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
-        now = int(datetime.now(timezone.utc).timestamp())
         cur.execute(
             "INSERT INTO logs (timestamp, chat_id, activity, xp_earned, xp_breakdown) "
             "VALUES (?, ?, ?, ?, ?);",
             (
-                now,
+                timestamp,
                 chat_id,
                 activity,
                 xp_breakdown["total_xp"],
@@ -71,7 +71,7 @@ def insert_log(chat_id, activity, xp_breakdown):
         row_id = cur.lastrowid
         logger.debug(
             f"Inserted log: chat_id={chat_id}, activity='{activity}', "
-            f"xp_earned={xp_breakdown['total_xp']}, timestamp={now}"
+            f"xp_earned={xp_breakdown['total_xp']}, timestamp={timestamp}"
         )
         logger.debug(f"Database row_id: {row_id}")
     return row_id
