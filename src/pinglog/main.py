@@ -1,5 +1,11 @@
 import logging
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    CallbackQueryHandler,
+)
 from pinglog.config import TELEGRAM_BOT_TOKEN
 from pinglog.bot.handlers import (
     handle_start,
@@ -9,7 +15,10 @@ from pinglog.bot.handlers import (
     handle_yesterday,
     handle_date,
     handle_delete,
+    handle_delete_callback,
     handle_edit,
+    handle_edit_callback,
+    handle_cancel_callback,
 )
 
 logging.basicConfig(level="DEBUG")
@@ -30,6 +39,16 @@ def main():
 
     application.add_handler(CommandHandler("delete", handle_delete))
     application.add_handler(CommandHandler("edit", handle_edit))
+
+    application.add_handler(
+        CallbackQueryHandler(handle_delete_callback, pattern=r"^delete_\d+$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(handle_edit_callback, pattern=r"^edit_\d+$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(handle_cancel_callback, pattern=r"^cancel$")
+    )
 
     application.run_polling()
 

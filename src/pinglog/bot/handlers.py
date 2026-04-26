@@ -16,6 +16,7 @@ from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
 from pinglog.util import parse_reply, time_string_to_seconds
 from telegram.helpers import escape_markdown
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 import logging
 
 logger = logging.getLogger(__name__)
@@ -172,12 +173,32 @@ async def handle_delete(update, context):
             if 0 <= idx < len(recent_logs):
                 log_to_delete = recent_logs[idx]
                 logger.debug(f"Log entry selected for deletion: {log_to_delete}")
+
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Cancel", callback_data="cancel"),
+                        InlineKeyboardButton(
+                            "DELETE", callback_data=f"delete:{log_to_delete['id']}"
+                        ),
+                    ],
+                ]
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                safe_activity = escape_markdown(log_to_delete["activity"], version=2)
+                user_timezone = get_timezone(update.effective_user.id)
+                entry_time = (
+                    datetime.fromtimestamp(log_to_delete["timestamp"], tz=timezone.utc)
+                    .astimezone(ZoneInfo(user_timezone))
+                    .strftime("%H:%M")
+                )
+
                 await update.message.reply_markdown_v2(
-                    escape_markdown(
-                        f"Log entry selected for deletion: {log_to_delete}", version=2
-                    )
+                    f"*Delete* this log entry?\n\n{entry_time} \\- *{safe_activity}*",
+                    reply_markup=reply_markup,
                 )
                 return
+
         await update.message.reply_markdown_v2(
             "Invalid log index\\. Use /delete to see valid indices\\."
         )
@@ -185,8 +206,20 @@ async def handle_delete(update, context):
     await _show_recent(update, context)
 
 
+async def handle_delete_callback(update, context):
+    pass
+
+
 async def handle_edit(update, context):
     await _show_recent(update, context)
+
+
+async def handle_edit_callback(update, context):
+    pass
+
+
+async def handle_cancel_callback(update, context):
+    pass
 
 
 async def _show_log(update, context, log_date: date):
