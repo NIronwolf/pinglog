@@ -105,7 +105,11 @@ def calculate_xp(entry: str, chat_id: int) -> XPBreakdown:
 
     # Accuracy bonus - Timing relative to schedule ping
     target_ping_time = get_next_ping(chat_id)
+    logger.debug(
+        f"Target ping time: {datetime.fromtimestamp(target_ping_time) if target_ping_time else 'None'}"
+    )
     accuracy_seconds = now_utc.timestamp() - target_ping_time if target_ping_time else 0
+    logger.debug(f"Current time (UTC): {now_utc}, Accuracy seconds: {accuracy_seconds}")
     if accuracy_seconds < -15 * 60:  # More than 15 minutes before target ping (early)
         xp["accuracy_bonus"] = 0
     elif accuracy_seconds < -10 * 60:  # Up to 10 minutes before target ping (early)

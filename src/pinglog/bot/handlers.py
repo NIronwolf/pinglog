@@ -2,6 +2,7 @@ from pinglog.db.queries import (
     create_or_update_state,
     get_timezone,
     insert_log,
+    get_next_ping,
     set_next_ping,
     set_silent_next,
     get_ping_interval,
@@ -26,6 +27,9 @@ async def handle_start(update, context):
 
 
 async def handle_log_message(update, context):
+    if not await check_registered(update, context):
+        return
+
     log = parse_reply(update.message.text, update.effective_user.id)
 
     insert_log(update.effective_user.id, log["entry"], log["xp"]["total_xp"])
@@ -69,3 +73,12 @@ async def handle_log_message(update, context):
 
 def handle_status(update, context):
     pass
+
+
+async def check_registered(update, context) -> bool:
+    if get_next_ping(update.effective_user.id) is None:
+        await update.message.reply_text(
+            "Please send /start first to set up your account!"
+        )
+        return False
+    return True
