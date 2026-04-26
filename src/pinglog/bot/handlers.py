@@ -11,6 +11,7 @@ from pinglog.db.queries import (
     get_streak,
     get_day,
     get_recent_logs,
+    delete_log_entry,
 )
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
@@ -208,7 +209,20 @@ async def handle_delete(update, context):
 
 
 async def handle_delete_callback(update, context):
-    pass
+    query = update.callback_query
+
+    idx = int(query.data.split(":")[1])
+    logger.debug(f"delete callback received for log index: {idx}")
+
+    delete_log_entry(idx)
+
+    await query.answer()
+
+    entry_text = query.message.text.split("this log entry?\n\n", 1)[1]
+    await query.edit_message_text(
+        text=f"*Deleted log entry*:\n\n~{escape_markdown(entry_text, version=2)}~",
+        parse_mode="MarkdownV2",
+    )
 
 
 async def handle_edit(update, context):

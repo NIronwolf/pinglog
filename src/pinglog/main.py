@@ -41,10 +41,10 @@ def main():
     application.add_handler(CommandHandler("edit", handle_edit))
 
     application.add_handler(
-        CallbackQueryHandler(handle_delete_callback, pattern=r"^delete_\d+$")
+        CallbackQueryHandler(handle_delete_callback, pattern=r"^delete:\d+$")
     )
     application.add_handler(
-        CallbackQueryHandler(handle_edit_callback, pattern=r"^edit_\d+$")
+        CallbackQueryHandler(handle_edit_callback, pattern=r"^edit:\d+$")
     )
     application.add_handler(
         CallbackQueryHandler(handle_cancel_callback, pattern=r"^cancel$")
