@@ -38,7 +38,7 @@ async def handle_log_message(update, context):
 
     log = parse_reply(update.message.text, update.effective_user.id)
 
-    insert_log(update.effective_user.id, log["entry"], log["xp"]["total_xp"])
+    insert_log(update.effective_user.id, log["entry"], log["xp"])
 
     snooze = (
         log["snooze"]

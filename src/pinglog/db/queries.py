@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from pinglog.config import DATABASE_PATH, USER_TIMEZONE
@@ -52,19 +53,25 @@ def get_timezone(chat_id):
             return USER_TIMEZONE
 
 
-def insert_log(chat_id, activity, xp_earned):
+def insert_log(chat_id, activity, xp_breakdown):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         now = int(datetime.now(timezone.utc).timestamp())
         cur.execute(
-            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned) "
-            "VALUES (?, ?, ?, ?);",
-            (now, chat_id, activity, xp_earned),
+            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned, xp_breakdown) "
+            "VALUES (?, ?, ?, ?, ?);",
+            (
+                now,
+                chat_id,
+                activity,
+                xp_breakdown["total_xp"],
+                json.dumps(xp_breakdown),
+            ),
         )
         row_id = cur.lastrowid
         logger.debug(
             f"Inserted log: chat_id={chat_id}, activity='{activity}', "
-            f"xp_earned={xp_earned}, timestamp={now}"
+            f"xp_earned={xp_breakdown['total_xp']}, timestamp={now}"
         )
         logger.debug(f"Database row_id: {row_id}")
     return row_id
