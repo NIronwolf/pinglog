@@ -6,8 +6,13 @@ from pinglog.db.queries import (
     set_next_ping,
     set_silent_next,
     get_ping_interval,
+    is_silent_next,
+    get_total_xp,
+    get_streak,
+    get_day,
 )
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pinglog.util import parse_reply
 from telegram.helpers import escape_markdown
 
@@ -23,6 +28,7 @@ async def handle_start(update, context):
     )
     await update.message.reply_text(
         "I'll ping you every hour to check in. You can also snooze the pings for a certain amount of time if you need a break."
+        "Just add snooze or silent and a duration as XhYm at the end.  For example: 'Went for a run snooze 2h' or 'Feeling tired silent 8h'"
     )
 
 
@@ -71,8 +77,44 @@ async def handle_log_message(update, context):
     await update.message.reply_markdown_v2(message)
 
 
-def handle_status(update, context):
-    pass
+async def handle_status(update, context):
+    """Replys with the current status of the user.
+    Streak: X days
+    Total XP: Y XP
+    Today: Z entries, W XP
+
+    Next ping: HH:MM (in N minutes) [Silent]"""
+    user_timezone = get_timezone(update.effective_user.id)
+    next_ping_time = get_next_ping(update.effective_user.id)
+    next_ping_local = (
+        datetime.fromtimestamp(next_ping_time, tz=timezone.utc).astimezone(
+            ZoneInfo(user_timezone)
+        )
+        if next_ping_time
+        else None
+    )
+    next_ping_silent = is_silent_next(update.effective_user.id)
+    streak_days = get_streak(update.effective_user.id)
+    total_xp = get_total_xp(update.effective_user.id)
+    activity_today = get_day(
+        update.effective_user.id,
+        datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date(),
+    )
+    entries_today = len(activity_today)
+    xp_today = sum(entry["xp_earned"] for entry in activity_today)
+
+    parts = [
+        f"Streak: *{streak_days} days*",
+        f"Total XP: *{total_xp} XP*",
+        f"Today: *{entries_today} entries*, *{xp_today} XP*",
+        "",
+        f"Next ping: *{next_ping_local.strftime('%H:%M') if next_ping_local else 'N/A'}*"
+        + (" \\[Silent\\]" if next_ping_silent else ""),
+    ]
+
+    message = "\n".join(parts)
+
+    await update.message.reply_markdown_v2(message)
 
 
 async def check_registered(update, context) -> bool:
