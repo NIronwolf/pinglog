@@ -1,7 +1,12 @@
 import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from pinglog.config import TELEGRAM_BOT_TOKEN
-from pinglog.bot.handlers import handle_start, handle_log_message, handle_status
+from pinglog.bot.handlers import (
+    handle_start,
+    handle_log_message,
+    handle_status,
+    handle_today,
+)
 
 logging.basicConfig(level="DEBUG")
 
@@ -13,6 +18,7 @@ def main():
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_log_message)
     )
     application.add_handler(CommandHandler("status", handle_status))
+    application.add_handler(CommandHandler("today", handle_today))
     application.run_polling()
 
 

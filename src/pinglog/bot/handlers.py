@@ -117,6 +117,43 @@ async def handle_status(update, context):
     await update.message.reply_markdown_v2(message)
 
 
+async def handle_today(update, context):
+    """Replys with today's entries in the format:
+    Today - *Month D* (Y endtries, W XP)
+
+    *HH:MM* _+X XP_
+    Entry text
+
+    *HH:MM* _+X XP_
+    Entry text
+    """
+    user_timezone = get_timezone(update.effective_user.id)
+    activity_today = get_day(
+        update.effective_user.id,
+        datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date(),
+    )
+    entries_today = len(activity_today)
+    xp_today = sum(entry["xp_earned"] for entry in activity_today)
+
+    parts = [
+        f"Today \\- *{datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).strftime('%B %-d')}*"
+        + f" \\({entries_today} entries, {xp_today} XP\\)",
+    ]
+    for entry in activity_today:
+        entry_time = (
+            datetime.fromtimestamp(entry["timestamp"], tz=timezone.utc)
+            .astimezone(ZoneInfo(user_timezone))
+            .strftime("%H:%M")
+        )
+        parts.append(
+            f"\n*{entry_time}* _\\+{entry['xp_earned']} XP_\n{escape_markdown(entry['activity'], version=2)}"
+        )
+
+    message = "\n".join(parts)
+
+    await update.message.reply_markdown_v2(message)
+
+
 async def check_registered(update, context) -> bool:
     if get_next_ping(update.effective_user.id) is None:
         await update.message.reply_text(
