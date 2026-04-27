@@ -18,3 +18,4 @@ class ParsedReply(TypedDict):
     snooze: int
     silent: bool
     timestamp: int
+    timestamp_was_set: bool

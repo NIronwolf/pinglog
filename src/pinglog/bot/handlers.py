@@ -226,6 +226,55 @@ async def handle_delete_callback(update, context):
 
 
 async def handle_edit(update, context):
+    if context.args:
+        if context.args[0].isdigit():
+            idx = int(context.args[0])
+            recent_logs = get_recent_logs(update.effective_user.id)
+            if 0 <= idx < len(recent_logs):
+                log_to_edit = recent_logs[idx]
+                logger.debug(f"Log entry selected to edit: {log_to_edit}")
+
+                parsed = parse_reply(
+                    " ".join(context.args[1:]), update.effective_user.id
+                )
+                if parsed["entry"] == "":
+                    await update.message.reply_markdown_v2(
+                        "No new activity text provided\\. Please provide the new activity text after the index\\."
+                    )
+                    return
+                else:
+                    updated_entry = f"\n\n{parsed['entry']}"
+
+                safe_activity = escape_markdown(log_to_edit["activity"], version=2)
+                user_timezone = get_timezone(update.effective_user.id)
+                entry_time = (
+                    datetime.fromtimestamp(log_to_edit["timestamp"], tz=timezone.utc)
+                    .astimezone(ZoneInfo(user_timezone))
+                    .strftime("%H:%M")
+                )
+
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Cancel", callback_data="cancel"),
+                        InlineKeyboardButton(
+                            "EDIT", callback_data=f"edit:{log_to_edit['id']}"
+                        ),
+                    ],
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_markdown_v2(
+                    f"*Edit* this log entry?\n\n{entry_time} \\- *{safe_activity}*"
+                    f"{updated_entry}",
+                    reply_markup=reply_markup,
+                    reply_to_message_id=update.message.message_id,
+                )
+                return
+
+        await update.message.reply_markdown_v2(
+            "Invalid log index\\. Use /edit to see valid indices\\."
+        )
+        return
     await _show_recent(update, context)
 
 

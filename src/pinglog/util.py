@@ -31,6 +31,7 @@ def parse_reply(text: str, chat_id: int) -> ParsedReply:
         "snooze": 0,
         "silent": False,
         "timestamp": int(datetime.now(timezone.utc).timestamp()),
+        "timestamp_was_set": False,
     }
     if text:
         text = text.strip()
@@ -52,6 +53,7 @@ def parse_reply(text: str, chat_id: int) -> ParsedReply:
                 .astimezone(timezone.utc)
                 .timestamp()
             )
+            result["timestamp_was_set"] = True
             text = text[time_prefix.end() :]
         result["entry"] = text
 
