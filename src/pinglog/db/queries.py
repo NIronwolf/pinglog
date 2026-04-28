@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from pinglog.config import DATABASE_PATH, USER_TIMEZONE
 import logging
 from pinglog.datatypes import XPBreakdown
+from pinglog.db.models import init_db
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,10 @@ logger = logging.getLogger(__name__)
 def create_or_update_state(
     chat_id, timezone_str=USER_TIMEZONE, next_ping_at=None, silent_next=None
 ):
+    # Make sure we have a db
+    init_db()
+
+    # Create or update a user
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         fields = []
@@ -71,7 +76,8 @@ def insert_log(chat_id: int, timestamp: int, activity: str, xp_breakdown: XPBrea
         row_id = cur.lastrowid
         logger.debug(
             f"Inserted log: chat_id={chat_id}, activity='{activity}', "
-            f"xp_earned={xp_breakdown['total_xp']}, timestamp={timestamp}"
+            f"xp_earned={xp_breakdown['total_xp']}, timestamp={timestamp} "
+            f"{datetime.fromtimestamp(timestamp, tz=timezone.utc).astimezone(ZoneInfo(get_timezone(chat_id)))}"
         )
         logger.debug(f"Database row_id: {row_id}")
     return row_id
@@ -88,12 +94,15 @@ def get_streak(chat_id):
         cur = con.cursor()
         streak = 0
         today = datetime.now().date()
+        logger.debug(f"Treating TODAY as: {today}")
         check_date = today - timedelta(days=1)
         for row in cur.execute(
-            "SELECT timestamp FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
+            "SELECT timestamp, activity FROM logs WHERE chat_id=? ORDER BY timestamp DESC;",
             (chat_id,),
         ):
-            logger.debug(f"Processing log entry: {row[0]} for chat_id={chat_id}")
+            logger.debug(
+                f"Processing log entry: TS: {row[0]} Activity: {row[1]} for chat_id={chat_id}"
+            )
             log_date = (
                 datetime.fromtimestamp(row[0], tz=timezone.utc)
                 .astimezone(ZoneInfo(user_timezone))
@@ -106,7 +115,7 @@ def get_streak(chat_id):
                 break
             if check_date == log_date:
                 check_date = check_date - timedelta(days=1)
-            streak = (today - check_date).days
+            streak = (today - check_date).days - 1
         logger.debug(f"Calculated streak for chat_id={chat_id}: {streak}")
     return streak
 

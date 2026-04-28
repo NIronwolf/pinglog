@@ -239,7 +239,8 @@ async def handle_edit(update, context):
                 )
                 if parsed["entry"] == "":
                     await update.message.reply_markdown_v2(
-                        "No new activity text provided\\. Please provide the new activity text after the index\\."
+                        "No new activity text provided\\."
+                        "Please provide the new activity text after the index\\."
                     )
                     return
                 else:

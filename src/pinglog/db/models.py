@@ -1,8 +1,14 @@
 import sqlite3
 from pinglog.config import DATABASE_PATH
+from pathlib import Path
 
 
 def init_db():
+    # Ensure the database path exists so the db can be created
+    if not Path(DATABASE_PATH).parent.is_dir():
+        print(f"Databse path not present: {Path(DATABASE_PATH).parent}")
+        Path(DATABASE_PATH).parent.mkdir()
+
     con = sqlite3.connect(DATABASE_PATH)
 
     cur = con.cursor()

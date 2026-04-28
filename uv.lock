@@ -102,12 +102,14 @@ source = { editable = "." }
 dependencies = [
     { name = "python-dotenv" },
     { name = "python-telegram-bot", extra = ["callback-data", "job-queue", "webhooks"] },
+    { name = "tzdata" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "python-telegram-bot", extras = ["callback-data", "job-queue", "webhooks"], specifier = ">=22.7" },
+    { name = "tzdata", specifier = ">=2026.1" },
 ]
 
 [[package]]
