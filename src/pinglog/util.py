@@ -39,17 +39,14 @@ def parse_reply(text: str, chat_id: int) -> ParsedReply:
         # Look for HH:MM format at the start of the message to allow backdating entries
         time_prefix = re.match(r"^(\d{1,2}):(\d{2})\s+", text)
         if time_prefix:
-            date = datetime.now(timezone.utc).date()
+            user_timezone = get_timezone(chat_id)
+            now_local = datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone))
+            date = now_local.date()
             parsed_time = time(int(time_prefix.group(1)), int(time_prefix.group(2)))
-            now_local = datetime.now(timezone.utc).astimezone(
-                ZoneInfo(get_timezone(chat_id))
-            )
             if parsed_time > now_local.time():
                 date -= timedelta(days=1)
             result["timestamp"] = int(
-                datetime.combine(
-                    date, parsed_time, tzinfo=ZoneInfo(get_timezone(chat_id))
-                )
+                datetime.combine(date, parsed_time, tzinfo=ZoneInfo(user_timezone))
                 .astimezone(timezone.utc)
                 .timestamp()
             )

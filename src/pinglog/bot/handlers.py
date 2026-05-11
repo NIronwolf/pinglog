@@ -248,8 +248,13 @@ async def handle_edit(update, context):
 
                 safe_activity = escape_markdown(log_to_edit["activity"], version=2)
                 user_timezone = get_timezone(update.effective_user.id)
+                edit_timestamp = (
+                    parsed["timestamp"]
+                    if parsed["timestamp_was_set"]
+                    else log_to_edit["timestamp"]
+                )
                 entry_time = (
-                    datetime.fromtimestamp(log_to_edit["timestamp"], tz=timezone.utc)
+                    datetime.fromtimestamp(edit_timestamp, tz=timezone.utc)
                     .astimezone(ZoneInfo(user_timezone))
                     .strftime("%H:%M")
                 )
@@ -351,17 +356,21 @@ async def _show_recent(update, context):
         .astimezone(ZoneInfo(user_timezone))
         .date()
     )
+    logger.debug(f"Current Day initialized to: {current_day}")
     for log in recent_logs:
         entry_date = (
-            datetime.fromtimestamp(log["timestamp"], tz=timezone.utc).astimezone(
-                ZoneInfo(user_timezone)
-            )
-        ).date()
+            datetime.fromtimestamp(log["timestamp"], tz=timezone.utc)
+            .astimezone(ZoneInfo(user_timezone))
+            .date()
+        )
         if entry_date != current_day:
             day_diff = (
                 datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()
                 - current_day
             ).days  # - 1
+            logger.debug(
+                f"Day Diff: {day_diff}, Entry Date: {entry_date}, Current Date: {datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()}"
+            )
             day_str = (
                 "Today"
                 if day_diff == 0
@@ -384,6 +393,9 @@ async def _show_recent(update, context):
         datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()
         - entry_date
     ).days
+    logger.debug(
+        f"Day Diff: {day_diff}, Entry Date: {entry_date}, Current Date: {datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).date()}"
+    )
     day_str = (
         "Today"
         if day_diff == 0
@@ -397,6 +409,7 @@ async def _show_recent(update, context):
 
     parts = ["Recent activity:"]
     for log in formated_logs:
+        logger.debug(f"Formatted log entry: {log}")
         parts.append(log)
 
     await update.message.reply_markdown_v2("\n".join(parts))
