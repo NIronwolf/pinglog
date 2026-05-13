@@ -300,7 +300,12 @@ def get_stats(chat_id):
         }
 
 
-def edit_log_entry(log_id, new_activity=None, new_xp_earned=None):
+def edit_log_entry(
+    log_id,
+    new_activity: str | None = None,
+    new_xp_breakdown: XPBreakdown | None = None,
+    new_timestamp: int | None = None,
+):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         fields = []
@@ -308,9 +313,14 @@ def edit_log_entry(log_id, new_activity=None, new_xp_earned=None):
         if new_activity is not None:
             fields.append("activity=?")
             params.append(new_activity)
-        if new_xp_earned is not None:
+        if new_xp_breakdown is not None:
             fields.append("xp_earned=?")
-            params.append(new_xp_earned)
+            params.append(new_xp_breakdown["total_xp"])
+            fields.append("xp_breakdown=?")
+            params.append(json.dumps(new_xp_breakdown))
+        if new_timestamp is not None:
+            fields.append("timestamp=?")
+            params.append(new_timestamp)
         params.append(log_id)
         if not fields:
             logger.debug(f"No fields to update for log entry id={log_id}")

@@ -18,6 +18,7 @@ from pinglog.bot.handlers import (
     handle_delete_callback,
     handle_edit,
     handle_edit_callback,
+    handle_clearedits,
     handle_cancel_callback,
 )
 
@@ -39,6 +40,7 @@ def main():
 
     application.add_handler(CommandHandler("delete", handle_delete))
     application.add_handler(CommandHandler("edit", handle_edit))
+    application.add_handler(CommandHandler("clearedits", handle_clearedits))
 
     application.add_handler(
         CallbackQueryHandler(handle_delete_callback, pattern=r"^delete:\d+$")
@@ -47,7 +49,7 @@ def main():
         CallbackQueryHandler(handle_edit_callback, pattern=r"^edit:\d+$")
     )
     application.add_handler(
-        CallbackQueryHandler(handle_cancel_callback, pattern=r"^cancel$")
+        CallbackQueryHandler(handle_cancel_callback, pattern=r"^cancel(:\d+)?$")
     )
 
     application.run_polling()

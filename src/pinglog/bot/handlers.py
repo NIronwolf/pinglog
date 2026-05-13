@@ -12,6 +12,7 @@ from pinglog.db.queries import (
     get_day,
     get_recent_logs,
     delete_log_entry,
+    edit_log_entry,
 )
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
@@ -228,6 +229,14 @@ async def handle_delete_callback(update, context):
 async def handle_edit(update, context):
     if context.args:
         if context.args[0].isdigit():
+            if "pending_edits" not in context.user_data:
+                context.user_data["pending_edits"] = {}
+            if 10 <= len(context.user_data["pending_edits"]):
+                await update.message.reply_markdown_v2(
+                    "Too many pending edits\\. Please complete or cancel existing edits before creating new ones\\.\n"
+                    "Or you can clear all edits using /clearedits"
+                )
+                return
             idx = int(context.args[0])
             recent_logs = get_recent_logs(update.effective_user.id)
             if 0 <= idx < len(recent_logs):
@@ -239,21 +248,27 @@ async def handle_edit(update, context):
                 )
                 if parsed["entry"] == "":
                     await update.message.reply_markdown_v2(
-                        "No new activity text provided\\."
+                        "No new activity text provided\\.\n"
                         "Please provide the new activity text after the index\\."
                     )
                     return
                 else:
-                    updated_entry = f"\n\n{parsed['entry']}"
+                    updated_activity = f"{parsed['entry']}"
+                    safe_updated_activity = escape_markdown(updated_activity, version=2)
 
-                safe_activity = escape_markdown(log_to_edit["activity"], version=2)
+                safe_old_activity = escape_markdown(log_to_edit["activity"], version=2)
                 user_timezone = get_timezone(update.effective_user.id)
+                old_time = (
+                    datetime.fromtimestamp(log_to_edit["timestamp"], tz=timezone.utc)
+                    .astimezone(ZoneInfo(user_timezone))
+                    .strftime("%H:%M")
+                )
                 edit_timestamp = (
                     parsed["timestamp"]
                     if parsed["timestamp_was_set"]
                     else log_to_edit["timestamp"]
                 )
-                entry_time = (
+                updated_time = (
                     datetime.fromtimestamp(edit_timestamp, tz=timezone.utc)
                     .astimezone(ZoneInfo(user_timezone))
                     .strftime("%H:%M")
@@ -261,19 +276,35 @@ async def handle_edit(update, context):
 
                 keyboard = [
                     [
-                        InlineKeyboardButton("Cancel", callback_data="cancel"),
                         InlineKeyboardButton(
-                            "EDIT", callback_data=f"edit:{log_to_edit['id']}"
+                            "Cancel",
+                            callback_data=f"cancel:{update.message.message_id}",
+                        ),
+                        InlineKeyboardButton(
+                            "EDIT", callback_data=f"edit:{update.message.message_id}"
                         ),
                     ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
-                await update.message.reply_markdown_v2(
-                    f"*Edit* this log entry?\n\n{entry_time} \\- *{safe_activity}*"
-                    f"{updated_entry}",
+                confirmation = await update.message.reply_markdown_v2(
+                    f"*Edit* this log entry?\n\n"
+                    f"{old_time} \\- *{safe_old_activity}*\n"
+                    f"  \\- to \\-\n"
+                    f"{updated_time} \\- *{safe_updated_activity}*",
                     reply_markup=reply_markup,
                     reply_to_message_id=update.message.message_id,
+                )
+
+                # Store edit for callback handling
+                context.user_data["pending_edits"][update.message.message_id] = {
+                    "id": log_to_edit["id"],
+                    "parsed": parsed,
+                    "confirm_message_id": confirmation.message_id,  # Probably don't need this or confmation variable
+                }
+                logger.debug(
+                    f"Stored pending edit for message {update.message.message_id}: "
+                    f"{context.user_data['pending_edits'][update.message.message_id]}"
                 )
                 return
 
@@ -285,11 +316,53 @@ async def handle_edit(update, context):
 
 
 async def handle_edit_callback(update, context):
-    pass
+    query = update.callback_query
+
+    idx = int(query.data.split(":")[1])
+    logger.debug(f"edit callback received for message index: {idx}")
+
+    pending = context.user_data.get("pending_edits", {}).get(idx)
+    if pending is None:
+        logger.error(f"No pending edit found for message index: {idx}")
+        await query.answer(text="Error: No pending edit found.", show_alert=True)
+        await query.edit_message_text(text="Edit expired.")
+        return
+    parsed = pending["parsed"]
+
+    timestamp_to_update = parsed["timestamp"] if parsed["timestamp_was_set"] else None
+    edit_log_entry(
+        log_id=pending["id"],
+        new_activity=parsed["entry"],
+        new_timestamp=timestamp_to_update,
+    )
+    del context.user_data["pending_edits"][idx]
+
+    await query.answer()
+
+    entry_text = query.message.text.split("this log entry?\n\n", 1)[1]
+    old_entry = entry_text.split("\n  - to -\n", 1)[0]
+    edited_entry = entry_text.split("\n  - to -\n", 1)[1]
+    await query.edit_message_text(
+        text=f"*Edited log entry*:\n\n~{escape_markdown(old_entry, version=2)}~\n"
+        f"  \\- to \\-\n"
+        f"{escape_markdown(edited_entry, version=2)}",
+        parse_mode="MarkdownV2",
+    )
+
+
+async def handle_clearedits(update, context):
+    context.user_data.pop("pending_edits", None)
+    await update.message.reply_markdown_v2("All pending edits cleared\\.")
 
 
 async def handle_cancel_callback(update, context):
     query = update.callback_query
+
+    parts = query.data.split(":")
+    if len(parts) > 1:
+        msg_id = int(parts[1])
+        context.user_data.get("pending_edits", {}).pop(msg_id, None)
+        logger.debug(f"Cancelled pending edit for message index: {msg_id}")
 
     await query.answer()
 
