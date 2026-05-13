@@ -1,8 +1,11 @@
 import logging
 import re
+from pathlib import Path
 from datetime import datetime, timezone, timedelta, time
 from zoneinfo import ZoneInfo
 from pinglog.datatypes import ParsedReply, XPBreakdown
+import tomllib
+import random
 
 from pinglog.db.queries import (
     get_day,
@@ -10,6 +13,7 @@ from pinglog.db.queries import (
     is_silent_next,
     get_streak,
     get_timezone,
+    get_recent_logs,
 )
 
 logger = logging.getLogger(__name__)
@@ -204,3 +208,55 @@ def format_seconds(seconds: int, resolution: int = 1) -> str:
     if seconds > 0:
         parts.append(f"{seconds}s")
     return " ".join(parts) if parts else "0s"
+
+
+def select_ping_message(chat_id: int) -> str:
+    """Selects a message to use for the schedule ping based on several factors.
+    Combines with a last activity, gets specific with a scheduled duration,
+    it is Morning or Late, if they've come back from a silent period,
+    and a generic list of messages. Personalization and variety are key to keeping users engaged.
+    """
+    # TODO: cache ping_messages for multi-user scale (code in Obsidian)
+    ping_messages = {}
+    with open(Path(__file__).parent / "ping_messages.toml", "rb") as f:
+        ping_messages = tomllib.load(f)
+
+    user_timezone = get_timezone(chat_id)
+    now_local = datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone))
+
+    last_entry = get_recent_logs(chat_id, limit=1)
+    activity = last_entry[0]["activity"] if last_entry else None
+    duration = last_entry[0]["duration_estimate"] if last_entry else None
+
+    silent = is_silent_next(chat_id)
+
+    messages = list(ping_messages["generic"]["messages"])
+    logger.debug("Adding 'generic' messages")
+
+    morning = now_local.hour < 7
+    late = now_local.hour >= 23
+
+    if activity:
+        messages.extend(ping_messages.get("last_activity", {}).get("messages", []))
+        logger.debug("Adding 'activity' messages")
+
+    if duration and duration > 0:
+        messages.extend(ping_messages.get("estimate_expired", {}).get("messages", []))
+        logger.debug("Adding 'duration' messages")
+
+    if morning:
+        messages.extend(ping_messages.get("morning", {}).get("messages", []))
+        logger.debug("Adding 'morning' messages")
+
+    if late:
+        messages.extend(ping_messages.get("late_night", {}).get("messages", []))
+        logger.debug("Adding 'late' messages")
+
+    if silent:
+        messages.extend(ping_messages.get("comeback", {}).get("messages", []))
+        logger.debug("Adding 'silent' messages")
+
+    selected = random.choice(messages) if messages else "Time to log your activity!"
+    return selected.format(
+        activity=activity or "", duration=format_seconds(duration) if duration else ""
+    )

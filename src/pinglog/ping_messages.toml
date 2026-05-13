@@ -1,0 +1,113 @@
+[generic]
+messages = [
+  "What's up?",
+  "Still at it?",
+  "Brain check — what are you up to?",
+  "Quick check-in time 👀",
+  "Log something before you forget!",
+  "Straight chillin'?",
+  "Working on something new?",
+  "What's the vibe right now?",
+  "Hey! What's going on?",
+  "Touch grass or touch keyboard — either way, log it!",
+  "What's the current mission?",
+  "Status report, soldier 🫡",
+  "What are we doing with our one wild and precious life?",
+  "Drop a line — what's happening?",
+  "Checking in. What's the situation?",
+]
+
+[last_activity]
+messages = [
+  "How'd {activity} go?",
+  "{activity} — still or switched?",
+  "Still on {activity} or moved on?",
+  "Update me on {activity}!",
+  "How's {activity} treating you?",
+  "Still deep in {activity}?",
+  "Any progress on {activity}?",
+  "{activity} still the main event?",
+  "What's the latest with {activity}?",
+  "Is {activity} done or still cooking?",
+  "Pick up where you left off on {activity}?",
+  "Back to {activity} or something new?",
+  "Did {activity} go as planned?",
+  "How long have you been on {activity}?",
+  "Still vibing with {activity}?",
+]
+
+[estimate_expired]
+messages = [
+  "You estimated {duration} for {activity} — nailed it?",
+  "{activity} timer's up! How'd your timing feel?",
+  "Hope {activity} went well! What's the move?",
+  "Time's up for {activity}! Did you stick the landing?",
+  "{duration} on {activity} — accurate call?",
+  "Your {activity} block just ended. How'd it go?",
+  "The {duration} you planned for {activity} is up — what now?",
+  "How'd your {duration} of {activity} treat you?",
+  "Did {activity} fit in {duration} or spill over?",
+  "Clock's up on {activity}. Moving on or need more time?",
+  "{activity} — done in {duration} as planned?",
+  "Checking in on that {activity} block. All good?",
+  "You called {duration} for {activity}. How close were you?",
+  "Time awareness check — how'd {activity} go?",
+  "{activity} should be wrapping up. What's next?",
+]
+
+[morning]
+messages = [
+  "Good morning! What's the plan today?",
+  "Fresh day! What are you jumping into?",
+  "Rise and grind — what's first on the list?",
+  "Morning! What's the opening move today?",
+  "New day, new log. What are you starting with?",
+  "Early bird! What's on the agenda?",
+  "Morning check-in — what's the game plan?",
+  "Day's just getting started. What are you tackling first?",
+  "Wakey wakey! What's the mission today?",
+  "Good morning! Goals for today?",
+  "First log of the day — make it count! What's up?",
+  "The day is young. What are you working on?",
+  "Morning! Set the tone — what's first?",
+  "Coffee in hand? What's the first task?",
+  "A brand new day. What are we doing with it?",
+]
+
+[late_night]
+messages = [
+  "Still up? What are you working on?",
+  "Burning the midnight oil — what's going on?",
+  "Night owl mode activated. What's the mission?",
+  "Late night grind? What are you up to?",
+  "The night is yours — what are you doing with it?",
+  "Still going strong? What's keeping you up?",
+  "Midnight check-in — what's happening?",
+  "You're up late! What's the project?",
+  "The quiet hours are good for something — what is it?",
+  "Late night, log it right. What's up?",
+  "Night shift vibes. What are you working on?",
+  "Still at it? What's keeping the lights on?",
+  "Late night productivity check — what's going on?",
+  "The night crew is checking in. What's the status?",
+  "Up past midnight — what's worth staying up for?",
+]
+
+[comeback]
+messages = [
+  "Welcome back! What are you jumping into?",
+  "Hope you got some good rest! What's first?",
+  "Back in action! What's the plan?",
+  "Rise and shine — what's on deck?",
+  "You're back! What are we doing?",
+  "Refreshed and ready? What's up?",
+  "The silent period is over — what's next?",
+  "Back to it! What are you working on?",
+  "Hope the break was good. What's first up?",
+  "Welcome back to the land of the logged 😄",
+  "Back online! What's the move?",
+  "Rest mode off — what are we doing?",
+  "Good to have you back. What's happening?",
+  "Recharged? What's on the agenda?",
+  "And we're back! What's first?",
+]

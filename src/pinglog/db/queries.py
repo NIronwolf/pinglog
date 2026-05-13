@@ -59,24 +59,31 @@ def get_timezone(chat_id):
             return USER_TIMEZONE
 
 
-def insert_log(chat_id: int, timestamp: int, activity: str, xp_breakdown: XPBreakdown):
+def insert_log(
+    chat_id: int,
+    timestamp: int,
+    activity: str,
+    xp_breakdown: XPBreakdown,
+    duration_estimate: int = 0,
+):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         cur.execute(
-            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned, xp_breakdown) "
-            "VALUES (?, ?, ?, ?, ?);",
+            "INSERT INTO logs (timestamp, chat_id, activity, xp_earned, xp_breakdown, duration_estimate) "
+            "VALUES (?, ?, ?, ?, ?, ?);",
             (
                 timestamp,
                 chat_id,
                 activity,
                 xp_breakdown["total_xp"],
                 json.dumps(xp_breakdown),
+                duration_estimate,
             ),
         )
         row_id = cur.lastrowid
         logger.debug(
             f"Inserted log: chat_id={chat_id}, activity='{activity}', "
-            f"xp_earned={xp_breakdown['total_xp']}, timestamp={timestamp} "
+            f"xp_earned={xp_breakdown['total_xp']}, timestamp={timestamp}, duration_estimate={duration_estimate}, "
             f"{datetime.fromtimestamp(timestamp, tz=timezone.utc).astimezone(ZoneInfo(get_timezone(chat_id)))}"
         )
         logger.debug(f"Database row_id: {row_id}")
@@ -263,7 +270,7 @@ def get_recent_logs(chat_id: int, limit: int = 10):
     with sqlite3.connect(DATABASE_PATH) as con:
         cur = con.cursor()
         cur.execute(
-            "SELECT id, timestamp, activity, xp_earned FROM logs "
+            "SELECT id, timestamp, activity, xp_earned, xp_breakdown, duration_estimate FROM logs "
             "WHERE chat_id=? ORDER BY timestamp DESC LIMIT ?;",
             (chat_id, limit),
         )
@@ -276,6 +283,8 @@ def get_recent_logs(chat_id: int, limit: int = 10):
                     "timestamp": row[1],
                     "activity": row[2],
                     "xp_earned": row[3],
+                    "xp_breakdown": json.loads(row[4]) if row[4] else None,
+                    "duration_estimate": row[5],
                 }
             )
         return result
