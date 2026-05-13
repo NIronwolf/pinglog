@@ -355,6 +355,10 @@ async def handle_clearedits(update, context):
     await update.message.reply_markdown_v2("All pending edits cleared\\.")
 
 
+async def handle_recent(update, context):
+    await _show_recent(update, context)
+
+
 async def handle_cancel_callback(update, context):
     query = update.callback_query
 
