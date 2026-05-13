@@ -16,7 +16,7 @@ from pinglog.db.queries import (
 )
 from datetime import datetime, timezone, timedelta, date
 from zoneinfo import ZoneInfo
-from pinglog.util import parse_reply, time_string_to_seconds
+from pinglog.util import parse_reply, time_string_to_seconds, format_seconds
 from telegram.helpers import escape_markdown
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 import logging
@@ -112,12 +112,25 @@ async def handle_status(update, context):
     )
     entries_today = len(activity_today)
     xp_today = sum(entry["xp_earned"] for entry in activity_today)
+    last_entry = get_recent_logs(update.effective_user.id, limit=1)
+    activity_duration = (
+        int(datetime.now(timezone.utc).astimezone(ZoneInfo(user_timezone)).timestamp())
+        - last_entry[0]["timestamp"]
+        if last_entry
+        else None
+    )
 
     parts = [
         f"Streak: *{streak_days} days*",
         f"Total XP: *{total_xp} XP*",
         f"Today: *{entries_today} entries*, *{xp_today} XP*",
         "",
+        f"Last activity: *{escape_markdown(last_entry[0]['activity'], version=2)}*"
+        if last_entry
+        else "No activity logged yet today\\.",
+        f"Duration: *{format_seconds(activity_duration, resolution=300)}*\n"
+        if activity_duration
+        else "",
         f"Next ping: *{next_ping_local.strftime('%H:%M') if next_ping_local else 'N/A'}*"
         + (" \\[Silent\\]" if next_ping_silent else ""),
     ]

@@ -178,3 +178,29 @@ def time_string_to_seconds(timestring: str) -> int:
     logger.debug(f"offset_seconds: {offset_seconds}")
 
     return offset_seconds
+
+
+def format_seconds(seconds: int, resolution: int = 1) -> str:
+    """Formats a duration in seconds into a human-readable string like '1d 2h 30m'.
+    Rounds to the specified resolution in seconds (default 1 second). For example,
+    with a resolution of 60, it would round to the nearest minute.
+    """
+
+    seconds = round(seconds / resolution) * resolution
+
+    parts = []
+    if seconds >= 24 * 3600:
+        days = seconds // (24 * 3600)
+        parts.append(f"{days}d")
+        seconds %= 24 * 3600
+    if seconds >= 3600:
+        hours = seconds // 3600
+        parts.append(f"{hours}h")
+        seconds %= 3600
+    if seconds >= 60:
+        minutes = seconds // 60
+        parts.append(f"{minutes}m")
+        seconds %= 60
+    if seconds > 0:
+        parts.append(f"{seconds}s")
+    return " ".join(parts) if parts else "0s"
