@@ -1,4 +1,6 @@
 import logging
+import asyncio
+from telegram import BotCommand
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -26,8 +28,26 @@ from pinglog.bot.handlers import (
 logging.basicConfig(level="DEBUG")
 
 
+async def post_init(application: Application):
+    await application.bot.set_my_commands(
+        [
+            BotCommand("start", "Set up your PingLog account"),
+            BotCommand("status", "View your current streak and XP"),
+            BotCommand("today", "View today's log entries"),
+            BotCommand("yesterday", "View yesterday's log entries"),
+            BotCommand("date", "View log entries for a specific date"),
+            BotCommand("recent", "View recent log entries"),
+            BotCommand("edit", "Edit a recent log entry"),
+            BotCommand("delete", "Delete a recent log entry"),
+            BotCommand("clearedits", "Clear all pending edits"),
+        ]
+    )
+
+
 def main():
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application = (
+        Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
+    )
     application.add_handler(CommandHandler("start", handle_start))
 
     application.add_handler(
